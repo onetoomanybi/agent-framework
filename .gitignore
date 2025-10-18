@@ -204,3 +204,23 @@ agents.md
 # AI
 .claude/
 WARP.md
+
+# Willowbrook - Development/Debug/Setup Scripts
+# Keep: fabric_notebook_tools.py, fabric_notebook_agent_cell.py, agent_lakehouse_tools.py, requirements.txt, spec/
+willowbrook/src/*_verify_*.py
+willowbrook/src/*_test_*.py
+willowbrook/src/*_discover_*.py
+willowbrook/src/*_update_*.py
+willowbrook/src/*_check_*.py
+willowbrook/src/discover_*.py
+willowbrook/src/phase*.py
+willowbrook/src/register_*.py
+willowbrook/src/setup_*.py
+willowbrook/src/find_*.py
+willowbrook/src/investigate_*.py
+willowbrook/src/fix_*.py
+willowbrook/src/final_*.py
+willowbrook/src/create_*.py
+willowbrook/src/fabric_ai_foundry_client.py
+willowbrook/src/agent_tool_handler.py
+willowbrook/src/test_connection.py

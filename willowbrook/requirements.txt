@@ -1,0 +1,17 @@
+# Azure AI and Agent dependencies
+azure-ai-projects>=1.0.0
+azure-identity>=1.15.0
+
+# Azure Storage for Lakehouse access
+azure-storage-file-datalake>=12.14.0
+
+# Data processing
+pandas>=2.0.0
+
+# Optional: For more advanced CSV handling
+csv23>=0.3.3
+
+# OpenTelemetry for observability and Application Insights integration
+opentelemetry-api>=1.20.0
+opentelemetry-sdk>=1.20.0
+azure-monitor-opentelemetry>=1.0.0
