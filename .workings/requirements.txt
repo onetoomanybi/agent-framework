@@ -1,0 +1,12 @@
+# Azure AI and Agent dependencies
+azure-ai-projects>=1.0.0
+azure-identity>=1.15.0
+
+# Azure Storage for Lakehouse access
+azure-storage-file-datalake>=12.14.0
+
+# Data processing
+pandas>=2.0.0
+
+# Optional: For more advanced CSV handling
+csv23>=0.3.3

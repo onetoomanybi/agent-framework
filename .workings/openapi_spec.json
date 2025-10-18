@@ -1,0 +1,240 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Fabric Lakehouse API",
+    "description": "API for accessing Microsoft Fabric Lakehouse files",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://your-function-app.azurewebsites.net/api",
+      "description": "Azure Function App hosting the agent tools"
+    }
+  ],
+  "paths": {
+    "/listFiles": {
+      "post": {
+        "summary": "List files in a Fabric lakehouse",
+        "description": "Lists all files in a specified lakehouse path, optionally filtered by extension",
+        "operationId": "listFiles",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["workspace_id", "lakehouse_id"],
+                "properties": {
+                  "workspace_id": {
+                    "type": "string",
+                    "description": "The Fabric workspace ID (GUID)",
+                    "example": "12345678-1234-1234-1234-123456789012"
+                  },
+                  "lakehouse_id": {
+                    "type": "string",
+                    "description": "The lakehouse ID (GUID)",
+                    "example": "87654321-4321-4321-4321-210987654321"
+                  },
+                  "path": {
+                    "type": "string",
+                    "description": "Path within the lakehouse",
+                    "default": "Files",
+                    "example": "Files/data"
+                  },
+                  "file_extension": {
+                    "type": "string",
+                    "description": "Optional file extension filter (e.g., '.csv')",
+                    "example": ".csv"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "file_count": {
+                      "type": "integer"
+                    },
+                    "files": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "size": {
+                            "type": "integer"
+                          },
+                          "last_modified": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/readCSVFile": {
+      "post": {
+        "summary": "Read a CSV file from lakehouse",
+        "description": "Reads and parses a CSV file from the specified lakehouse path",
+        "operationId": "readCSVFile",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["workspace_id", "lakehouse_id", "file_path"],
+                "properties": {
+                  "workspace_id": {
+                    "type": "string",
+                    "description": "The Fabric workspace ID (GUID)",
+                    "example": "12345678-1234-1234-1234-123456789012"
+                  },
+                  "lakehouse_id": {
+                    "type": "string",
+                    "description": "The lakehouse ID (GUID)",
+                    "example": "87654321-4321-4321-4321-210987654321"
+                  },
+                  "file_path": {
+                    "type": "string",
+                    "description": "Full path to the CSV file within the lakehouse",
+                    "example": "Files/data/sales.csv"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "row_count": {
+                      "type": "integer"
+                    },
+                    "headers": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "data": {
+                      "type": "array",
+                      "description": "First 100 rows of the CSV file",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/getLakehouseInfo": {
+      "post": {
+        "summary": "Get lakehouse information",
+        "description": "Retrieves metadata about a specific lakehouse",
+        "operationId": "getLakehouseInfo",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["workspace_id", "lakehouse_id"],
+                "properties": {
+                  "workspace_id": {
+                    "type": "string",
+                    "description": "The Fabric workspace ID (GUID)",
+                    "example": "12345678-1234-1234-1234-123456789012"
+                  },
+                  "lakehouse_id": {
+                    "type": "string",
+                    "description": "The lakehouse ID (GUID)",
+                    "example": "87654321-4321-4321-4321-210987654321"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "workspace_id": {
+                      "type": "string"
+                    },
+                    "lakehouse_id": {
+                      "type": "string"
+                    },
+                    "last_modified": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "AzureAD": {
+        "type": "oauth2",
+        "flows": {
+          "clientCredentials": {
+            "tokenUrl": "https://login.microsoftonline.com/{tenant-id}/oauth2/v2.0/token",
+            "scopes": {
+              "https://analysis.windows.net/powerbi/api/.default": "Access Fabric resources"
+            }
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "AzureAD": []
+    }
+  ]
+}

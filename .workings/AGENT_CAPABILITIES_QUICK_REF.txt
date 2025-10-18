@@ -1,0 +1,303 @@
+# Agent Capabilities - Quick Reference
+
+## THE 3 TOOLS AGENTS HAVE ACCESS TO
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                    AGENT'S TOOLBOX                           │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  TOOL 1: listFiles                                           │
+│  ├─ Input:  workspace_id, lakehouse_id, path, extension    │
+│  ├─ Does:   Lists all files in a lakehouse                 │
+│  ├─ Returns: [{"name": "file.csv", "size": 1024, ...}]     │
+│  └─ Useful for: Finding data, checking what exists         │
+│                                                              │
+│  TOOL 2: readCSVFile                                         │
+│  ├─ Input:  workspace_id, lakehouse_id, file_path          │
+│  ├─ Does:   Reads and parses CSV files                     │
+│  ├─ Returns: {headers: [...], data: [rows], row_count: N}  │
+│  └─ Useful for: Viewing data, analyzing content            │
+│                                                              │
+│  TOOL 3: getLakehouseInfo                                    │
+│  ├─ Input:  workspace_id, lakehouse_id                     │
+│  ├─ Does:   Gets lakehouse metadata                        │
+│  ├─ Returns: {workspace_id, lakehouse_id, last_modified}   │
+│  └─ Useful for: Status checks, freshness of data           │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## AGENT DECISION TREE
+
+```
+                    User Asks Question
+                          │
+                          ↓
+                ┌─────────────────────┐
+                │ Agent Understands   │
+                │ the request         │
+                └────────┬────────────┘
+                         │
+           ┌─────────────┼─────────────┐
+           │             │             │
+           ↓             ↓             ↓
+      Needs to      Needs to        Needs to
+      find files    read file       check status
+           │             │             │
+           ↓             ↓             ↓
+      listFiles()   readCSVFile()  getLakehouseInfo()
+           │             │             │
+           ↓             ↓             ↓
+      Gets list    Gets data     Gets metadata
+           │             │             │
+           └─────────────┼─────────────┘
+                         │
+                         ↓
+            Agent Formats Response
+                         │
+                         ↓
+              User Sees Answer
+```
+
+---
+
+## WHAT AGENTS CAN'T DO
+
+```
+❌ Write or modify data
+❌ Delete files
+❌ Execute code
+❌ Create new files
+❌ Run SQL queries
+❌ Join data between files
+❌ Perform calculations
+❌ Access other workspaces
+❌ Export data to external systems
+❌ Read entire large files
+```
+
+---
+
+## WHAT AGENTS CAN DO
+
+```
+✅ Understand natural language
+✅ List files
+✅ Read CSV content
+✅ Analyze what data exists
+✅ Answer follow-up questions
+✅ Remember conversation context
+✅ Chain multiple tool calls
+✅ Summarize data
+✅ Provide instant responses
+✅ Explain findings
+```
+
+---
+
+## EXAMPLE CONVERSATIONS
+
+### Conversation 1: Simple Discovery
+```
+User:  "What files do I have?"
+Agent: Calls listFiles
+Agent: "You have 3 CSV files: sales.csv, customers.csv, products.csv"
+```
+
+### Conversation 2: Data Reading
+```
+User:  "Show me the sales data"
+Agent: Calls readCSVFile("sales.csv")
+Agent: "The sales file has 5,000 records with columns: 
+        date, amount, region. I can see sales ranging from 
+        $100 to $50,000."
+```
+
+### Conversation 3: Multi-Step Analysis
+```
+User:  "Do I have inventory data? If so, how many items?"
+Agent: Calls listFiles
+Agent: Finds "inventory.csv"
+Agent: Calls readCSVFile("inventory.csv")
+Agent: "Yes, you have inventory.csv with 2,500 item records.
+        Columns include: product_id, quantity, location."
+```
+
+### Conversation 4: Status Check
+```
+User:  "When was the data last updated?"
+Agent: Calls getLakehouseInfo
+Agent: "Your lakehouse was last updated on Oct 18, 2025 
+        at 3:45 PM"
+```
+
+---
+
+## AGENT WORKFLOW - DETAILED
+
+```
+Step 1: User speaks
+   Input: "List all CSV files bigger than 5MB"
+
+Step 2: Agent comprehends
+   Action: Parse natural language
+   Output: Need to list files and filter by size
+
+Step 3: Agent selects tools
+   Decision: Call listFiles() first
+   Reasoning: Must see all files before filtering
+
+Step 4: Agent calls tool
+   Tool: listFiles(workspace_id, lakehouse_id)
+   Result: [
+     {name: "sales.csv", size: 10000000},
+     {name: "data.csv", size: 3000000},
+     {name: "archive.csv", size: 8000000}
+   ]
+
+Step 5: Agent processes result
+   Filter: size > 5MB
+   Matches: sales.csv (10MB), archive.csv (8MB)
+
+Step 6: Agent formats response
+   Output: "Found 2 CSV files > 5MB:
+           - sales.csv (10 MB)
+           - archive.csv (8 MB)"
+
+Step 7: User receives answer
+   Display: Agent's formatted response
+```
+
+---
+
+## HOW AGENT DECIDES WHICH TOOL TO USE
+
+### Pattern Matching
+
+```
+User says...                    Agent thinks...              Tool chosen
+─────────────────────────────────────────────────────────────────────────
+"List files"                → Need to see files         → listFiles
+"Show me the data"          → Need to read file         → readCSVFile
+"What's in that file?"      → Need to read file         → readCSVFile
+"How many records?"         → Need to read file         → readCSVFile
+"Is data available?"        → Need to list files        → listFiles
+"When was it updated?"      → Need metadata             → getLakehouseInfo
+"Show me CSV files"         → Need to list files        → listFiles
+"Read customers data"       → Need to find + read       → listFiles + readCSVFile
+"What formats do I have?"   → Need to list all          → listFiles
+```
+
+---
+
+## AGENT INTELLIGENCE LIMITS
+
+### What Agent UNDERSTANDS
+- English natural language questions
+- Context from conversation history
+- File names and data structures
+- Size and date information
+- Implied requests
+
+### What Agent CANNOT UNDERSTAND
+- Domain-specific business logic
+- Complex mathematical formulas
+- External system references
+- Ambiguous requests (asks for clarification)
+- Non-English languages (depends on model)
+
+---
+
+## TYPICAL AGENT INTERACTION
+
+```
+┌─────────────────────────────────────────────┐
+│         FABRIC NOTEBOOK USER                │
+│                                             │
+│  Types: "Analyze my sales data"            │
+└────────────────┬────────────────────────────┘
+                 │
+                 ↓
+        ┌─────────────────────┐
+        │   AGENT RECEIVES    │
+        │   Natural language  │
+        │   understanding     │
+        └────────┬────────────┘
+                 │
+         ┌───────┴────────┐
+         │                │
+         ↓                ↓
+    Tool call 1:    Tool call 2:
+    listFiles      readCSVFile
+    (Find files)   (Get data)
+         │                │
+         ↓                ↓
+    "Found        "Data has..."
+    sales.csv"
+         │                │
+         └────────┬───────┘
+                  │
+                  ↓
+        ┌──────────────────────┐
+        │   AGENT PROCESSES    │
+        │   Tool Results       │
+        │   Combines info      │
+        │   Creates response   │
+        └────────┬─────────────┘
+                 │
+                 ↓
+        ┌──────────────────────┐
+        │   AGENT RESPONDS     │
+        │                      │
+        │   "Your sales data   │
+        │    shows 5,000       │
+        │    transactions..."  │
+        └────────┬─────────────┘
+                 │
+                 ↓
+┌─────────────────────────────────────────────┐
+│         USER SEES ANSWER IN NOTEBOOK        │
+└─────────────────────────────────────────────┘
+```
+
+---
+
+## KEY TAKEAWAYS
+
+1. **Agents are Assistants, Not Experts**
+   - Good for exploration and discovery
+   - Not for complex analysis
+
+2. **Agents Have 3 Tools**
+   - List, Read, Info
+   - All focused on data access
+
+3. **Agents Are Smart About Tool Selection**
+   - Automatically choose right tool
+   - Can chain tools together
+   - Learn from conversation history
+
+4. **Agents Are Safe**
+   - Cannot modify data
+   - Cannot access unauthorized resources
+   - All requests logged
+
+5. **Agents Enable Conversational Data Access**
+   - No SQL needed
+   - No coding needed
+   - Just ask natural language questions
+
+---
+
+## AGENT PERSONALITY TRAITS
+
+- ✅ **Helpful**: Always tries to answer questions
+- ✅ **Honest**: Says when it can't do something
+- ✅ **Context-Aware**: Remembers conversation
+- ✅ **Tool-Smart**: Knows which tool fits the job
+- ✅ **Respectful**: Follows security boundaries
+- ⚠️ **Limited**: Can't do complex analysis
+- ⚠️ **Constrained**: Can't modify data

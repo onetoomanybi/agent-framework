@@ -65,3 +65,37 @@ Unit tests should follow these guidelines:
 - Validate that each test actually tests the target behavior, e.g. we should not have tests that creates a mock, calls the mock and then verifies that the mock was called, without the target code being involved. We also shouldn't have tests that test language features, e.g. something that the compiler would catch anyway.
 - Avoid adding excessive comments to tests. Instead favour clear easy to understand code.
 - Follow the patterns in the unit tests in the same project or classes to which new tests are being added
+
+
+
+## Python Guidelines
+
+### Python Code Guidelines
+
+- All `.py` files under `python/` must start with the header `# Copyright (c) Microsoft. All rights reserved.`
+- Use type hints throughout the public API surface and keep imports explicit (avoid wildcard imports).
+- Follow the repo tooling: run `uv run poe fmt` for formatting, `uv run poe lint`, `uv run poe pyright`, and `uv run poe mypy` for static analysis before sending changes.
+- Prefer raising framework-specific exceptions from `agent_framework.exceptions` when applicable and reuse shared utilities instead of duplicating helpers.
+- Ensure public-facing modules, classes, and functions include docstrings that explain behavior and parameters.
+- Treat secrets as configuration: load values from `os.environ[...]` (or `pydantic-settings`) and never commit secrets.
+- Keep logging consistent with the existing packages by using the `logging` module and structured messages.
+
+### Python Sample Guidelines
+
+Samples live under `python/samples`. When adding a new sample:
+
+- Group it with similar content (e.g., `getting_started`, provider-specific directories) and include a `README.md` describing prerequisites and how to run it.
+- Keep runnable scripts self-contained; prefer a single file with a `main()` entry point and guard it with `if __name__ == "__main__":`.
+- Show environment variable usage for configuration and highlight required dependencies or authentication steps in comments.
+- Mirror existing sample conventions: short introductory docstring, clear function definitions, and concise inline comments only where the intent is non-obvious.
+- When referencing packages under development, use relative imports that align with the surrounding samples.
+
+### Python Test Guidelines
+
+Tests reside alongside their packages under `python/packages/*/tests`.
+
+- Write tests with `pytest` and mark async tests using `@pytest.mark.asyncio`.
+- Use fixtures for shared setup, prefer `unittest.mock` (`AsyncMock`, `MagicMock`, `patch`) for isolation, and keep assertions focused on observable behavior.
+- Organize Arrange/Act/Assert with clear blank-line separation or comments when the flow is complex.
+- Run the default test tasks (`uv run poe test` or package-specific `run_tasks_in_packages_if_exists.py test`) to validate new test coverage.
+- Avoid hardcoding secrets or network calls; rely on mocks or local doubles instead.

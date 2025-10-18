@@ -1,0 +1,408 @@
+# What Do The Agents Do? - Complete Breakdown
+
+## ONE-LINER
+The Azure AI Foundry agents are AI-powered assistants that understand natural language requests from users and automatically call tools to access and analyze Fabric data.
+
+---
+
+## AGENT CAPABILITIES
+
+The agents in this system have been given 3 tools they can use:
+
+### TOOL 1: listFiles
+**What it does**: Lists all files in a Fabric lakehouse
+
+**When agent uses it**:
+- User asks: "What files do I have?"
+- User asks: "Show me all CSV files"
+- User asks: "List the data files in my lakehouse"
+- User asks: "Do you have access to my data?"
+
+**What agent receives back**:
+```json
+{
+  "success": true,
+  "file_count": 5,
+  "files": [
+    {"name": "sales.csv", "size": 1024000, "last_modified": "2025-10-18T10:30:00"},
+    {"name": "customers.csv", "size": 2048000, "last_modified": "2025-10-18T11:00:00"},
+    {"name": "inventory.csv", "size": 512000, "last_modified": "2025-10-18T09:15:00"}
+  ]
+}
+```
+
+**Agent then**:
+- Sees there are 3 CSV files
+- Can read the file names and sizes
+- Understands when they were last modified
+- Responds to user: "I found 3 CSV files: sales.csv (1 MB), customers.csv (2 MB), and inventory.csv (0.5 MB)"
+
+---
+
+### TOOL 2: readCSVFile
+**What it does**: Reads and parses CSV file content
+
+**When agent uses it**:
+- User asks: "Show me the sales data"
+- User asks: "Read the customers.csv file"
+- User asks: "What's in that file?"
+- User asks: "How many rows are in the data?"
+
+**What agent receives back**:
+```json
+{
+  "success": true,
+  "row_count": 145,
+  "headers": ["date", "product", "quantity", "price"],
+  "data": [
+    {"date": "2025-10-01", "product": "Widget A", "quantity": "100", "price": "9.99"},
+    {"date": "2025-10-01", "product": "Widget B", "quantity": "50", "price": "19.99"},
+    {"date": "2025-10-02", "product": "Widget A", "quantity": "120", "price": "9.99"},
+    ...
+  ]
+}
+```
+
+**Agent then**:
+- Sees the structure of the data
+- Reads the column headers
+- Views sample rows
+- Can analyze and summarize
+- Responds: "The sales data has 145 rows with columns: date, product, quantity, price. The data shows sales of different widgets with their quantities and prices."
+
+---
+
+### TOOL 3: getLakehouseInfo
+**What it does**: Gets metadata about the lakehouse
+
+**When agent uses it**:
+- User asks: "Tell me about my lakehouse"
+- User asks: "When was the data last updated?"
+- User asks: "Is my lakehouse accessible?"
+
+**What agent receives back**:
+```json
+{
+  "success": true,
+  "workspace_id": "abc-123-def-456",
+  "lakehouse_id": "xyz-789-uvw-012",
+  "last_modified": "2025-10-18T11:30:00"
+}
+```
+
+**Agent then**:
+- Knows the workspace and lakehouse IDs
+- Knows when it was last modified
+- Responds: "Your lakehouse was last updated on October 18, 2025 at 11:30 AM"
+
+---
+
+## HOW AGENTS WORK - THE THINKING PROCESS
+
+### Example Conversation
+
+**User**: "Do I have any sales data? If so, how many records are there?"
+
+### Agent's Thinking (Step by Step):
+
+**Step 1: Parse the request**
+- Agent reads: "Do I have any sales data? If so, how many records are there?"
+- Agent understands: User is asking about files AND wants record count
+
+**Step 2: Decide which tools to use**
+- First, need to list files to find "sales data"
+- Call: `listFiles` with extension filter ".csv"
+
+**Step 3: Get tool result**
+- Result: Found files including "sales_data.csv"
+
+**Step 4: Decide next action**
+- Found a sales data file
+- User wants record count
+- Need to read the file
+- Call: `readCSVFile` with file_path="sales_data.csv"
+
+**Step 5: Get tool result**
+- Result: CSV has 5,432 rows
+
+**Step 6: Format response for user**
+- Combine information
+- Respond: "Yes! I found sales_data.csv with 5,432 records. The file contains columns: date, sales_rep, amount, and region."
+
+### What the Agent CANNOT Do (By Design)
+
+❌ Modify or delete files
+❌ Write data back to Lakehouse
+❌ Access files outside the specified workspace/lakehouse
+❌ Run complex queries or joins
+❌ Write SQL queries
+❌ Create new files
+❌ Execute arbitrary code
+
+### What the Agent CAN Do
+
+✅ Read file lists
+✅ Read CSV content (first 100 rows)
+✅ Understand natural language questions
+✅ Chain multiple tool calls together
+✅ Analyze and summarize data
+✅ Answer follow-up questions
+✅ Maintain conversation context
+✅ Explain what it finds
+
+---
+
+## AGENT REASONING EXAMPLES
+
+### Example 1: Simple Request
+```
+User: "List my files"
+
+Agent thinks:
+- User wants to see files
+- Use listFiles tool
+- Return: List of files
+
+Output:
+"You have 3 files: data.csv, report.xlsx, summary.txt"
+```
+
+### Example 2: Multi-Step Request
+```
+User: "How many products are in my inventory?"
+
+Agent thinks:
+- Step 1: List files to find inventory data
+- Step 2: Look for inventory-related file
+- Step 3: Read the file
+- Step 4: Count rows
+- Step 5: Report back
+
+Output:
+"I found inventory.csv with 1,247 products in your system."
+```
+
+### Example 3: Complex Reasoning
+```
+User: "Show me my 5 largest files and tell me what they contain"
+
+Agent thinks:
+- Step 1: List all files
+- Step 2: Sort by size
+- Step 3: Take top 5
+- Step 4: Read each file to understand content
+- Step 5: Summarize what's in each
+
+Output:
+"Your 5 largest files:
+1. sales_2025.csv (10 MB) - Contains 50,000 sales transactions
+2. customers.csv (8 MB) - Contains 100,000 customer records
+3. products.csv (5 MB) - Contains 25,000 product SKUs
+4. inventory.csv (3 MB) - Contains current stock levels
+5. reports.csv (2 MB) - Contains historical analytics"
+```
+
+---
+
+## AGENT LIMITATIONS & CONSTRAINTS
+
+### File Access Limits
+- Can only access specified Lakehouse
+- Can only list files, not execute them
+- Can only read first 100 rows of CSV
+- Cannot handle binary files
+- Cannot access metadata tables
+
+### Data Operation Limits
+- Cannot join data from multiple files
+- Cannot perform statistical calculations
+- Cannot aggregate data across files
+- Cannot create pivot tables
+- Cannot write new data
+
+### Security Constraints
+- Cannot bypass authentication
+- Uses managed identity (no hardcoded credentials)
+- Cannot access other workspaces
+- Cannot access files outside Lakehouse
+- All requests are logged
+
+### Processing Limits
+- Cannot handle files over a certain size
+- Cannot process very wide CSV files efficiently
+- Response time limited by Azure Function timeout
+- Limited to 100 rows per file read
+
+---
+
+## AGENT INTERACTION PATTERN
+
+### The Agent Conversation Loop
+
+```
+┌──────────────────────────────────────┐
+│  User sends natural language query   │
+│  "Find all CSV files bigger than 1MB"│
+└────────────┬─────────────────────────┘
+             │
+             ↓
+┌──────────────────────────────────────┐
+│  Agent parses and understands        │
+│  Determines tools needed             │
+└────────────┬─────────────────────────┘
+             │
+             ↓
+┌──────────────────────────────────────┐
+│  Agent calls: listFiles              │
+│  Parameters: all files               │
+└────────────┬─────────────────────────┘
+             │
+             ↓
+┌──────────────────────────────────────┐
+│  Tool returns results                │
+│  File list with sizes                │
+└────────────┬─────────────────────────┘
+             │
+             ↓
+┌──────────────────────────────────────┐
+│  Agent processes results             │
+│  Filters: size > 1MB                 │
+│  Formats response                    │
+└────────────┬─────────────────────────┘
+             │
+             ↓
+┌──────────────────────────────────────┐
+│  Agent sends response                │
+│  "Found 3 CSV files > 1MB:..."       │
+└──────────────────────────────────────┘
+```
+
+---
+
+## REAL-WORLD USE CASES
+
+### Use Case 1: Data Exploration
+```
+User in Fabric: "What data do I have available?"
+
+Agent process:
+1. Calls listFiles
+2. Groups by type
+3. Summarizes content
+4. Reports: "You have 5 CSV files with sales, customer, and inventory data"
+```
+
+### Use Case 2: Quick Data Review
+```
+User: "Show me a sample of the latest sales data"
+
+Agent process:
+1. Calls listFiles to find sales files
+2. Identifies most recent "sales_2025.csv"
+3. Calls readCSVFile
+4. Shows first few rows
+5. Reports: "Latest sales file has columns: date, amount, region. 
+   Recent entries show sales ranging from $1,000 to $50,000"
+```
+
+### Use Case 3: Data Quality Check
+```
+User: "Do you have complete data for all products?"
+
+Agent process:
+1. Lists files
+2. Reads inventory.csv
+3. Counts rows
+4. Reads products.csv
+5. Counts rows
+6. Compares
+7. Reports: "Inventory has 1,200 products listed, but inventory data shows 
+   1,180 items. 20 products may be missing from inventory."
+```
+
+### Use Case 4: Data Analysis
+```
+User: "Summarize the sales data from September"
+
+Agent process:
+1. Lists files
+2. Reads sales data
+3. Filters by month
+4. Analyzes: totals, averages, trends
+5. Reports: "September sales totaled $2.3M across 500 transactions,
+   averaging $4,600 per transaction. Top regions were West and South."
+```
+
+---
+
+## AGENT VS HUMAN
+
+### Agents are good at:
+✅ Finding files quickly
+✅ Reading data structure
+✅ Summarizing information
+✅ Remembering context in conversation
+✅ Asking clarifying questions
+✅ Providing instant answers
+✅ 24/7 availability
+
+### Agents are NOT good at:
+❌ Complex statistical analysis
+❌ Creating business logic
+❌ Making decisions
+❌ Modifying data
+❌ Running reports
+❌ Accessing external systems
+❌ Understanding domain-specific rules
+
+---
+
+## WHAT THE AGENT "KNOWS"
+
+### At Startup
+The agent is created with:
+- An identity (agent_id)
+- A set of tools (from OpenAPI spec)
+- Instructions/system prompt (defined in AI Foundry)
+- Authentication credentials
+
+### During Conversation
+The agent learns:
+- Previous messages in the thread
+- What data is available
+- File names and sizes
+- CSV structure and sample data
+- Results of previous tool calls
+
+### It Maintains
+- Thread ID (conversation context)
+- Message history
+- Tool call results
+- State for next request
+
+---
+
+## SUMMARY: WHAT AGENTS DO
+
+**The agents are:**
+- ✅ Intelligent assistants for data discovery
+- ✅ Natural language interface to Lakehouse data
+- ✅ Conversational data explorers
+- ✅ File and data summarizers
+- ✅ Always-available data helpers
+
+**They enable users to:**
+- Ask questions about their data naturally
+- Get instant answers without coding
+- Explore data without SQL
+- Understand file contents quickly
+- Chain multiple data operations
+
+**They achieve this by:**
+- Understanding natural language
+- Calling pre-defined tools
+- Processing tool results
+- Formatting human-friendly responses
+- Maintaining conversation context
+
+= **Smart conversational access to Fabric data**
