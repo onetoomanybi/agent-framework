@@ -6,6 +6,8 @@ It authenticates to Fabric and reads files from a lakehouse.
 """
 
 import json
+import io
+import pandas as pd
 from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
 from azure.storage.filedatalake import DataLakeServiceClient
 from typing import List, Dict
@@ -40,59 +42,76 @@ class FabricLakehouseCredential:
 
 
 async def list_lakehouse_files(
-    workspace_id: str, 
+    workspace_id: str,
     lakehouse_id: str,
     path: str = "Files",
-    file_extension: str = None
+    file_extension: str = None,
+    limit: int = 100,
+    offset: int = 0
 ) -> str:
     """
-    List files in a Fabric lakehouse.
-    
+    List files in a Fabric lakehouse with pagination.
+
     Args:
         workspace_id: The Fabric workspace ID (GUID)
         lakehouse_id: The lakehouse ID (GUID)
         path: Path within the lakehouse (default: "Files")
         file_extension: Optional filter by file extension (e.g., ".csv")
-        
+        limit: Maximum number of files to return (default: 100)
+        offset: Number of files to skip for pagination (default: 0)
+
     Returns:
-        JSON string containing list of files
+        JSON string containing list of files with pagination info
     """
     try:
         # Create credential
         credential = FabricLakehouseCredential()
-        
+
         # Connect to OneLake (Fabric's data lake)
         datalake_client = DataLakeServiceClient(
             account_url="https://onelake.dfs.fabric.microsoft.com",
             credential=credential
         )
-        
+
         # Get the file system client for the workspace
         fs_client = datalake_client.get_file_system_client(workspace_id)
-        
+
         # Build the full path
         full_path = f"{lakehouse_id}/{path}"
-        
+
         # List paths
         paths = fs_client.get_paths(path=full_path)
-        
-        # Filter files
-        files = []
+
+        # Filter files and apply pagination
+        all_files = []
         for p in paths:
             # Skip directories
             if not p.is_directory:
                 # Apply extension filter if specified
-                if file_extension is None or p.name.endswith(file_extension):
-                    files.append({
+                if (file_extension is None or
+                        p.name.endswith(file_extension)):
+                    all_files.append({
                         "name": p.name,
                         "size": p.content_length,
-                        "last_modified": p.last_modified.isoformat() if p.last_modified else None
+                        "last_modified": (
+                            p.last_modified.isoformat()
+                            if p.last_modified else None
+                        )
                     })
-        
+
+        # Apply pagination
+        total_count = len(all_files)
+        paginated_files = all_files[offset:offset + limit]
+        has_more = (offset + limit) < total_count
+
         return json.dumps({
             "success": True,
-            "file_count": len(files),
-            "files": files
+            "file_count": len(paginated_files),
+            "total_count": total_count,
+            "offset": offset,
+            "limit": limit,
+            "has_more": has_more,
+            "files": paginated_files
         })
         
     except Exception as e:
@@ -141,33 +160,18 @@ async def read_csv_file(
         download = file_client.download_file()
         content = download.readall()
         
-        # Decode content
-        text_content = content.decode('utf-8')
+        # Use pandas for robust CSV parsing
+        # Handles: quoted fields, escaped commas, various encodings, line breaks
+        df = pd.read_csv(io.BytesIO(content))
         
-        # Parse CSV (basic parsing)
-        lines = text_content.strip().split('\n')
-        
-        if len(lines) == 0:
-            return json.dumps({
-                "success": False,
-                "error": "File is empty"
-            })
-        
-        # First line is header
-        headers = lines[0].split(',')
-        
-        # Parse remaining lines
-        rows = []
-        for line in lines[1:]:
-            values = line.split(',')
-            row = {headers[i].strip(): values[i].strip() for i in range(min(len(headers), len(values)))}
-            rows.append(row)
+        # Convert to dictionary format for JSON serialization
+        data = df.head(100).to_dict(orient='records')
         
         return json.dumps({
             "success": True,
-            "row_count": len(rows),
-            "headers": headers,
-            "data": rows[:100]  # Return first 100 rows
+            "row_count": len(df),
+            "headers": df.columns.tolist(),
+            "data": data
         })
         
     except Exception as e:

@@ -25,7 +25,7 @@ class ValidationResult:
         self.gap_number = gap_number
     
     def print_result(self):
-        icon = "✅" if self.passed else "❌"
+        icon = "[PASS]" if self.passed else "[FAIL]"
         gap_ref = f" (Gap #{self.gap_number})" if self.gap_number else ""
         print(f"{icon} {self.message}{gap_ref}")
 

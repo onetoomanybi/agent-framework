@@ -7,6 +7,35 @@ It uses the notebookutils credentials to authenticate.
 
 from datetime import datetime, timedelta
 from azure.ai.projects import AIProjectClient
+from azure.identity import DefaultAzureCredential
+
+# Handle notebookutils which is only available in Fabric notebooks
+try:
+    # In Fabric notebook environment - notebookutils is a built-in
+    import notebookutils
+except ImportError:
+    # For local testing or non-Fabric environments - provide a mock
+    class MockNotebookUtils:
+        """Mock notebookutils for testing outside Fabric notebooks"""
+        
+        class credentials:
+            @staticmethod
+            def getToken(scope: str) -> str:
+                """
+                Mock credential for testing.
+                In real Fabric notebooks, this returns a valid Azure token.
+                For testing, returns a placeholder token.
+                
+                Args:
+                    scope: The token scope (e.g., "https://ml.azure.com")
+                    
+                Returns:
+                    A token string (mock for testing)
+                """
+                return "mock-token-for-testing-local-development"
+    
+    # Use the mock when running outside Fabric
+    notebookutils = MockNotebookUtils()
 
 
 class FabricMLCredential:
@@ -39,22 +68,33 @@ class FabricMLCredential:
         })()
 
 
-def connect_to_ai_foundry(endpoint: str, agent_id: str):
+def connect_to_ai_foundry(endpoint: str, agent_id: str, use_default_credential: bool = False):
     """
     Connect to Azure AI Foundry and retrieve an agent.
     
     Args:
-        endpoint: The Azure AI Foundry endpoint URL
+        endpoint: The Azure AI Foundry endpoint URL (e.g., "https://your-project.cognitiveservices.azure.com")
         agent_id: The ID of the agent to retrieve
+        use_default_credential: If True, use DefaultAzureCredential (modern pattern).
+                               If False (default), use Fabric notebookutils credential.
         
     Returns:
         Tuple of (client, agent) if successful, (None, None) if failed
     """
     try:
-        # Create the credential
-        credential = FabricMLCredential()
+        # Choose credential based on environment
+        if use_default_credential:
+            # Modern pattern: Use DefaultAzureCredential
+            # Works with: environment variables, managed identity, Azure CLI, etc.
+            credential = DefaultAzureCredential()
+            print("✓ Using DefaultAzureCredential (modern pattern)")
+        else:
+            # Fabric pattern: Use notebookutils
+            # Works in Fabric notebooks and for local testing with mock
+            credential = FabricMLCredential()
+            print("✓ Using Fabric notebookutils credential")
         
-        # Create the AI Project client
+        # Create the AI Project client with modern endpoint parameter
         client = AIProjectClient(endpoint=endpoint, credential=credential)
         print("✓ Connected to Azure AI Foundry")
         
